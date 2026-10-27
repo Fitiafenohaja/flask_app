@@ -8,8 +8,8 @@ du projet n'est pas le code Python, mais **toute l'automatisation autour**.
 
 À chaque lancement du pipeline Jenkins, le code est récupéré depuis GitHub, testé, empaqueté
 dans une image Docker, publié sur Docker Hub, puis déployé automatiquement sur un cluster
-Kubernetes local (minikube). Il n'y a plus aucune étape manuelle entre une modification du code
-et sa mise en ligne.
+Kubernetes local (minikube). Un seul clic sur **Build Now** suffit pour passer d'une
+modification du code à sa mise en ligne.
 
 Technologies utilisées : **Python / Flask**, **unittest**, **Docker**, **Docker Hub**,
 **Jenkins**, **Kubernetes (minikube)**, **GitHub**.
