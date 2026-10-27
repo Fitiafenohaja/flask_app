@@ -46,6 +46,35 @@ Une API Flask minimale qui écoute sur le port **5000** :
 - minikube et kubectl
 - Un compte Docker Hub et un compte GitHub
 
+## Démarrage rapide (au quotidien)
+
+Une fois tout installé et configuré (voir sections suivantes), voici l'ordre de démarrage :
+
+```bash
+# 1. Docker doit tourner
+sudo systemctl start docker
+
+# 2. Démarrer le cluster Kubernetes
+minikube start --driver=docker
+kubectl get nodes                      # doit afficher "Ready"
+
+# 3. Démarrer Jenkins (conteneur déjà créé)
+docker start jenkins
+# → ouvrir http://localhost:8080
+
+# 4. Lancer le pipeline : job "flask-pipeline" → "Build Now"
+
+# 5. Accéder à l'application déployée
+curl http://$(minikube ip):30080/
+```
+
+Pour tout arrêter :
+
+```bash
+docker stop jenkins
+minikube stop
+```
+
 ## 1. Lancer l'application en local
 
 ```bash
@@ -102,10 +131,39 @@ docker run -d --name jenkins -p 8080:8080 \
   jenkins/jenkins:lts
 ```
 
-Plugins nécessaires : **Pipeline**, **Git**, **Docker Pipeline**, **Credentials Binding**,
-**Plain Credentials**.
+Ce `docker run` ne se fait **qu'une seule fois**. Ensuite :
 
-### 4.2 Créer les credentials
+```bash
+docker start jenkins      # démarrer
+docker stop jenkins       # arrêter
+docker restart jenkins    # redémarrer (ex. après installation de plugins)
+docker logs -f jenkins    # suivre les logs
+docker ps                 # vérifier que le conteneur "jenkins" est "Up"
+```
+
+Les données (jobs, credentials, historique des builds) sont conservées dans le volume
+`jenkins_home`, même si le conteneur est supprimé.
+
+### 4.2 Premier démarrage de Jenkins
+
+1. Ouvrir **http://localhost:8080**
+2. Récupérer le mot de passe initial :
+   ```bash
+   docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+   ```
+3. Choisir **Install suggested plugins**
+4. Créer le compte administrateur
+5. Installer les plugins manquants dans *Manage Jenkins → Plugins → Available plugins* :
+   **Docker Pipeline**, **Credentials Binding**, **Plain Credentials** (Pipeline et Git sont
+   déjà inclus dans les plugins suggérés), puis redémarrer Jenkins.
+
+Vérifier que Jenkins peut utiliser Docker :
+
+```bash
+docker exec jenkins docker ps
+```
+
+### 4.3 Créer les credentials
 
 Dans *Manage Jenkins → Credentials → System → Global credentials → Add Credentials* :
 
@@ -125,7 +183,7 @@ contient la clé d'accès au cluster et ne doit jamais être commité.
 
 > À refaire après chaque `minikube delete`, car les certificats du cluster changent.
 
-### 4.3 Créer le job
+### 4.4 Créer le job
 
 1. *New Item* → nom `flask-pipeline` → type **Pipeline**
 2. *Definition* : **Pipeline script from SCM**
@@ -158,6 +216,8 @@ curl http://$(minikube ip):30080/
 - **`connection refused` sur `192.168.49.2:8443`** : minikube n'est pas démarré → `minikube start`.
 - **minikube ne démarre pas (`apiserver process never appeared`)** : cluster corrompu →
   `minikube delete && minikube start`, puis régénérer le credential `kubeconfig`.
+- **Jenkins inaccessible sur http://localhost:8080** : vérifier `docker ps` ; si le conteneur
+  est arrêté → `docker start jenkins`, sinon consulter `docker logs jenkins`.
 - **`permission denied` sur `/var/run/docker.sock` dans Jenkins** : le conteneur Jenkins doit
   appartenir au groupe du socket Docker (`--group-add`).
 - **Le pod ne se met pas à jour** : l'image utilise le tag `latest`, c'est pourquoi le pipeline
