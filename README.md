@@ -1,5 +1,19 @@
 # flask_app — TP CI/CD avec Jenkins, Docker et Kubernetes
 
+## Présentation
+
+Ce projet est un **TP d'intégration et de déploiement continus (CI/CD)**. L'application
+elle-même est volontairement très simple (une API Flask qui répond « Hello World ») : l'intérêt
+du projet n'est pas le code Python, mais **toute l'automatisation autour**.
+
+À chaque lancement du pipeline Jenkins, le code est récupéré depuis GitHub, testé, empaqueté
+dans une image Docker, publié sur Docker Hub, puis déployé automatiquement sur un cluster
+Kubernetes local (minikube). Il n'y a plus aucune étape manuelle entre une modification du code
+et sa mise en ligne.
+
+Technologies utilisées : **Python / Flask**, **unittest**, **Docker**, **Docker Hub**,
+**Jenkins**, **Kubernetes (minikube)**, **GitHub**.
+
 ## But du TP
 
 Mettre en place une chaîne **CI/CD complète** autour d'une petite application Flask :
