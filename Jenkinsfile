@@ -37,5 +37,24 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        // Réseau "minikube" pour joindre l'API du cluster (192.168.49.2)
+                        docker.image('alpine/k8s:1.31.4').inside("-u root --network minikube --entrypoint=''") {
+                            sh '''
+                            kubectl apply -f k8s/deployment.yml
+                            kubectl apply -f k8s/service.yml
+                            # Le tag reste "latest" : on force le redémarrage pour récupérer la nouvelle image
+                            kubectl rollout restart deployment/flask-hello-deployment
+                            kubectl rollout status deployment/flask-hello-deployment --timeout=120s
+                            '''
+                        }
+                    }
+                }
+            }
+        }
     }
 }

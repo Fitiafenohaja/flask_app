@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: flask-hello-deployment
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: flask-hello
+
+  template:
+    metadata:
+      labels:
+        app: flask-hello
+
+    spec:
+      containers:
+      - name: flask-hello
+
+        image: fitiafenohajaun/flask_hello_jenkins:latest
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 5000
