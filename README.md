@@ -72,8 +72,8 @@ sudo systemctl start docker
 minikube start --driver=docker
 kubectl get nodes                      # doit afficher "Ready"
 
-# 3. Démarrer Jenkins (conteneur déjà créé)
-docker start jenkins
+# 3. Jenkins tourne en permanence (redémarrage automatique) — vérifier qu'il est "Up"
+docker ps --filter name=jenkins
 # → ouvrir http://localhost:8080
 
 # 4. Lancer le pipeline : job "flask-pipeline" → "Build Now"
@@ -82,12 +82,14 @@ docker start jenkins
 curl http://$(minikube ip):30080/
 ```
 
-Pour tout arrêter :
+Pour arrêter le cluster :
 
 ```bash
-docker stop jenkins
 minikube stop
 ```
+
+> **Jenkins ne doit jamais être arrêté.** Il est configuré avec `--restart=always` : il démarre
+> automatiquement avec Docker (au boot de la machine) et redémarre tout seul en cas de crash.
 
 ## 1. Lancer l'application en local
 
@@ -137,7 +139,7 @@ Jenkins tourne dans un conteneur qui a accès au Docker de l'hôte (nécessaire 
 et pour les étapes `docker.image(...).inside`) :
 
 ```bash
-docker run -d --name jenkins -p 8080:8080 \
+docker run -d --name jenkins --restart=always -p 8080:8080 \
   -v jenkins_home:/var/jenkins_home \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(which docker):/usr/bin/docker:ro \
@@ -145,14 +147,20 @@ docker run -d --name jenkins -p 8080:8080 \
   jenkins/jenkins:lts
 ```
 
-Ce `docker run` ne se fait **qu'une seule fois**. Ensuite :
+Ce `docker run` ne se fait **qu'une seule fois**. Grâce à `--restart=always`, Jenkins tourne
+en permanence : **ne jamais faire `docker stop jenkins`**. Pour un conteneur déjà créé sans
+cette option :
 
 ```bash
-docker start jenkins      # démarrer
-docker stop jenkins       # arrêter
-docker restart jenkins    # redémarrer (ex. après installation de plugins)
-docker logs -f jenkins    # suivre les logs
-docker ps                 # vérifier que le conteneur "jenkins" est "Up"
+docker update --restart=always jenkins
+```
+
+Commandes utiles :
+
+```bash
+docker ps --filter name=jenkins   # vérifier que le conteneur est "Up"
+docker logs -f jenkins            # suivre les logs
+docker restart jenkins            # redémarrer (ex. après installation de plugins)
 ```
 
 Les données (jobs, credentials, historique des builds) sont conservées dans le volume
@@ -231,7 +239,9 @@ curl http://$(minikube ip):30080/
 - **minikube ne démarre pas (`apiserver process never appeared`)** : cluster corrompu →
   `minikube delete && minikube start`, puis régénérer le credential `kubeconfig`.
 - **Jenkins inaccessible sur http://localhost:8080** : vérifier `docker ps` ; si le conteneur
-  est arrêté → `docker start jenkins`, sinon consulter `docker logs jenkins`.
+  est arrêté → `docker start jenkins` et vérifier qu'il est bien en `--restart=always`
+  (`docker inspect jenkins --format '{{.HostConfig.RestartPolicy.Name}}'`), sinon consulter
+  `docker logs jenkins`.
 - **`permission denied` sur `/var/run/docker.sock` dans Jenkins** : le conteneur Jenkins doit
   appartenir au groupe du socket Docker (`--group-add`).
 - **Le pod ne se met pas à jour** : l'image utilise le tag `latest`, c'est pourquoi le pipeline
